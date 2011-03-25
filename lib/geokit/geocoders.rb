@@ -4,6 +4,7 @@ require 'rexml/document'
 require 'yaml'
 require 'timeout'
 require 'logger'
+require 'uri'
 
 module Geokit
 
@@ -37,9 +38,13 @@ module Geokit
     end
     
     def url_escape(s)
-    s.gsub(/([^ a-zA-Z0-9_.-]+)/nu) do
-      '%' + $1.unpack('H2' * $1.size).join('%').upcase
-      end.tr(' ', '+')
+    ### 
+    # use URI-module for utf-8 2011.3.25 msuzuki
+    #
+    #s.gsub(/([^ a-zA-Z0-9_.-]+)/nu) do
+    #  '%' + $1.unpack('H2' * $1.size).join('%').upcase
+    #  end.tr(' ', '+')
+      URI::escape(s)
     end
     
     def camelize(str)
@@ -432,7 +437,12 @@ module Geokit
         address_str = address.is_a?(GeoLoc) ? address.to_geocodeable_s : address
         res = self.call_geocoder_service("http://maps.google.com/maps/geo?q=#{Geokit::Inflector::url_escape(address_str)}&output=xml#{bias_str}&key=#{Geokit::Geocoders::google}&oe=utf-8")
         return GeoLoc.new if !res.is_a?(Net::HTTPSuccess)
-        xml = res.body
+      ### 
+      # incompatible character encodings: ASCII-8 BIT and UTF-8.
+      # fixed up by force_encoding 2011.3.25 msuzuki
+      # 
+      # xml = res.body
+        xml = res.body.force_encoding("utf-8")
         logger.debug "Google geocoding. Address: #{address}. Result: #{xml}"
         return self.xml2GeoLoc(xml, address)        
       end
